@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mental Health Analyzer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 36px;
+      max-width: 580px;
+      width: 100%;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 6px; }
+    p.subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+
+    /* Input mode tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #555;
+    }
+    .tab.active {
+      background: #6c63ff;
+      border-color: #6c63ff;
+      color: white;
+      font-weight: 600;
+    }
+
+    /* Text input */
+    textarea {
+      width: 100%;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 15px;
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { outline: none; border-color: #6c63ff; }
+
+    /* Speech input area */
+    .speech-area {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 0 16px;
+      gap: 16px;
+    }
+    .speech-area.visible { display: flex; }
+
+    .mic-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: none;
+      background: #6c63ff;
+      color: white;
+      font-size: 32px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(108,99,255,0.35);
+    }
+    .mic-btn:hover { background: #5a52d5; transform: scale(1.05); }
+    .mic-btn.listening {
+      background: #e74c3c;
+      animation: pulse 1.2s ease-in-out infinite;
+      box-shadow: 0 4px 20px rgba(231,76,60,0.45);
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .speech-status {
+      font-size: 14px;
+      color: #888;
+      text-align: center;
+      min-height: 20px;
+    }
+    .speech-status.active { color: #e74c3c; font-weight: 600; }
+
+    .transcript-box {
+      width: 100%;
+      background: #f7f7ff;
+      border: 1.5px dashed #c5c0ff;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #333;
+      min-height: 60px;
+      line-height: 1.6;
+      font-style: italic;
+    }
+
+    /* Analyze button */
+    .analyze-btn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 14px;
+      background: #6c63ff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+    .analyze-btn:hover { background: #5a52d5; }
+    .analyze-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* Results */
+    #result {
+      margin-top: 24px;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity:0; transform:translateY(6px); }
+      to   { opacity:1; transform:none; }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .emotion-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .confidence { font-size: 13px; color: #888; }
+
+    .suggestion-box {
+      background: #f7f7ff;
+      border-left: 4px solid #6c63ff;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 14px;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .source-tag {
+      font-size: 11px;
+      background: #eee;
+      color: #666;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: auto;
+    }
+
+    #error-msg { color: #e74c3c; font-size: 13px; margin-top: 8px; }
+
+    /* Emotion colors */
+    .joy      { background:#fff3cd; color:#856404; }
+    .sadness  { background:#cce5ff; color:#004085; }
+    .anger    { background:#f8d7da; color:#721c24; }
+    .fear     { background:#e2d9f3; color:#4a235a; }
+    .disgust  { background:#d4edda; color:#155724; }
+    .surprise { background:#ffeeba; color:#856404; }
+    .neutral  { background:#e2e3e5; color:#383d41; }
+
+    /* Speech not supported warning */
+    .no-speech {
+      background: #fff3cd;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #856404;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🧠 Mental Health Analyzer</h1>
+  <p class="subtitle">Type or speak how you're feeling — get instant emotional support.</p>
+
+  <!-- Mode tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('text')">✏️ Type Text</button>
+    <button class="tab"        onclick="switchTab('speech')">🎤 Use Microphone</button>
+  </div>
+
+  <!-- Text input panel -->
+  <div id="text-panel">
+    <textarea id="userText"
+      placeholder="e.g. I've been feeling really overwhelmed lately and can't seem to relax...">
+    </textarea>
+  </div>
+
+  <!-- Speech input panel -->
+  <div id="speech-panel" class="speech-area">
+    <button class="mic-btn" id="micBtn" onclick="toggleSpeech()">🎤</button>
+    <p class="speech-status" id="speechStatus">Click the mic and start speaking</p>
+    <div class="transcript-box" id="transcript">
+      Your words will appear here as you speak...
+    </div>
+  </div>
+
+  <p id="error-msg"></p>
+  <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+    Analyze My Emotion
+  </button>
+
+  <!-- Result -->
+  <div id="result">
+    <div class="result-header">
+      <span class="emotion-badge" id="emotionBadge"></span>
+      <span class="confidence"    id="confidenceText"></span>
+      <span class="source-tag"    id="sourceTag"></span>
+    </div>
+    <div class="suggestion-box"   id="suggestionText"></div>
+  </div>
+</div>
+
+<script>
+  // ── Tab switching ──────────────────────────────────────────
+  let currentTab = 'text';
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (tab === 'text' ? i === 0 : i === 1));
+    });
+    document.getElementById('text-panel').style.display   = tab === 'text'   ? 'block' : 'none';
+    document.getElementById('speech-panel').classList.toggle('visible', tab === 'speech');
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error-msg').textContent = '';
+
+    if (tab === 'speech' && !('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      document.getElementById('speech-panel').innerHTML =
+        '<div class="no-speech">⚠️ Your browser does not support speech recognition.<br>Please use <strong>Google Chrome</strong> and try again.</div>';
+    }
+  }
+
+  // ── Speech Recognition ─────────────────────────────────────
+  let recognition = null;
+  let isListening = false;
+  let finalTranscript = '';
+
+  function setupSpeech() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+    const r = new SR();
+    r.continuous      = true;
+    r.interimResults  = true;
+    r.lang            = 'en-US';
+
+    r.onresult = (e) => {
+      let interim = '';
+      finalTranscript = '';
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript + ' ';
+        else                       interim         += e.results[i][0].transcript;
+      }
+      document.getElementById('transcript').textContent =
+        (finalTranscript + interim) || 'Listening...';
+    };
+
+    r.onerror = (e) => {
+      document.getElementById('speechStatus').textContent =
+        'Error: ' + e.error + '. Try again.';
+      stopListening();
+    };
+
+    r.onend = () => { if (isListening) r.start(); };   // keep alive until user stops
+    return r;
+  }
+
+  function toggleSpeech() {
+    if (!isListening) startListening();
+    else              stopListening();
+  }
+
+  function startListening() {
+    finalTranscript = '';
+    if (!recognition) recognition = setupSpeech();
+    if (!recognition) return;
+    recognition.start();
+    isListening = true;
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('micBtn').textContent = '⏹';
+    document.getElementById('speechStatus').textContent = '🔴 Listening... speak now';
+    document.getElementById('speechStatus').classList.add('active');
+    document.getElementById('transcript').textContent = 'Listening...';
+  }
+
+  function stopListening() {
+    if (recognition) recognition.stop();
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micBtn').textContent = '🎤';
+    document.getElementById('speechStatus').textContent = 'Done! Click Analyze to see results.';
+    document.getElementById('speechStatus').classList.remove('active');
+  }
+
+  // ── Analyze ────────────────────────────────────────────────
+  const suggestions = {
+    joy:      "Great to see you feeling positive! Keep journaling what made you happy today.",
+    sadness:  "It's okay to feel sad. Try a short walk outside or call someone you trust.",
+    anger:    "Take 5 slow deep breaths. A short walk or exercise can help release tension.",
+    fear:     "Try the 5-4-3-2-1 grounding technique: name 5 things you can see right now.",
+    disgust:  "Step away from what's bothering you. A short break and fresh air can help.",
+    surprise: "Take a moment to process. Write down your thoughts to make sense of things.",
+    neutral:  "You seem balanced. A short mindfulness session can help maintain that calm.",
+  };
+
+  async function analyze() {
+    const errEl = document.getElementById('error-msg');
+    errEl.textContent = '';
+
+    let text = '';
+    let source = '';
+
+    if (currentTab === 'text') {
+      text   = document.getElementById('userText').value.trim();
+      source = 'via text';
+    } else {
+      if (isListening) stopListening();
+      text   = finalTranscript.trim() ||
+               document.getElementById('transcript').textContent.trim();
+      source = 'via speech';
+      if (text === 'Listening...' || text === 'Your words will appear here as you speak...') {
+        text = '';
+      }
+    }
+
+    if (!text) {
+      errEl.textContent = currentTab === 'text'
+        ? 'Please type something first.'
+        : 'Please speak something first, then click Analyze.';
+      return;
+    }
+
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled    = true;
+    btn.textContent = 'Analyzing...';
+
+    try {
+      const res  = await fetch('/analyze', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.error) { errEl.textContent = data.error; return; }
+
+      const badge = document.getElementById('emotionBadge');
+      badge.textContent = data.emotion;
+      badge.className   = 'emotion-badge ' + data.emotion;
+
+      document.getElementById('confidenceText').textContent =
+        'Confidence: ' + data.confidence + '%';
+      document.getElementById('sourceTag').textContent = source;
+      document.getElementById('suggestionText').textContent =
+        suggestions[data.emotion] || 'Take care of yourself today.';
+
+      document.getElementById('result').style.display = 'block';
+
+    } catch(e) {
+      errEl.textContent = 'Something went wrong. Is the server running?';
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = 'Analyze My Emotion';
+    }
+  }
+</script>
+</body>
+</html>
