@@ -1,17 +1,25 @@
 from flask import Flask, request, jsonify, render_template
 from transformers import pipeline
 import random
-
+import os
 app = Flask(__name__)
 
 # Load the emotion detection model
 print("Loading emotion model... please wait")
-emotion_model = pipeline(
-    "text-classification",
-    model="j-hartmann/emotion-english-distilroberta-base",
-    return_all_scores=False
-)
-print("Model ready!")
+emotion_model = None
+
+def load_model():
+    global emotion_model
+    if emotion_model is None:
+        print("Loading emotion model...")
+        emotion_model = pipeline(
+            "text-classification",
+            model="j-hartmann/emotion-english-distilroberta-base",
+            return_all_scores=False
+        )
+        print("Model ready!")
+    return emotion_model
+
 
 # Suggestions
 suggestions = {
@@ -59,8 +67,15 @@ def analyze():
     if not text:
         return jsonify({"error": "Please enter some text"}), 400
 
-    result = emotion_model(text)[0]
+    try:
+        model = load_model()
+        result = model(text)[0]
+    except Exception as e:
+        return jsonify({"error": "Model failed to load"}), 500
     emotion = result["label"].lower()
+
+    if emotion not in suggestions:
+        emotion = "neutral"
     score = round(result["score"] * 100, 1)
 
     # Map unwanted emotions
@@ -81,4 +96,5 @@ def analyze():
     })
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
