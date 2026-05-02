@@ -1,154 +1,293 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Mental Health Analyzer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mental Health Analyzer</title>
 
-<style>
-body {
-  font-family: Arial;
-  background: #f0f4f8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --danger: #ef4444;
+            --bg-gradient: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+            --glass: rgba(255, 255, 255, 0.8);
+        }
 
-.card {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  width: 420px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-gradient);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #1f2937;
+        }
 
-textarea {
-  width: 100%;
-  height: 90px;
-  margin-top: 10px;
-}
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
 
-button {
-  margin-top: 10px;
-  width: 100%;
-  padding: 10px;
-  background: #6c63ff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
+        h2 {
+            margin-top: 0;
+            font-weight: 700;
+            color: #3730a3;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
 
-.mic-btn {
-  background: #ff4d4d;
-}
+        p.subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
 
-#transcript {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #555;
-}
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            font-family: inherit;
+            font-size: 15px;
+            resize: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
 
-#result {
-  margin-top: 20px;
-  display: none;
-}
-</style>
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .analyze-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .analyze-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .mic-btn {
+            background: white;
+            color: var(--danger);
+            border: 1px solid #fee2e2;
+        }
+
+        .mic-btn.active {
+            background: var(--danger);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        #transcript {
+            margin-top: 12px;
+            font-size: 13px;
+            font-style: italic;
+            color: #6366f1;
+            min-height: 18px;
+            text-align: center;
+        }
+
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 16px;
+            border: 1px dashed rgba(99, 102, 241, 0.3);
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-item {
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #4b5563;
+            width: 90px;
+            display: inline-block;
+        }
+
+        .tag {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-transform: capitalize;
+        }
+    </style>
 </head>
-
 <body>
 
 <div class="card">
-  <h2>Mental Health Analyzer</h2>
+    <h2>Mental Health Analyzer</h2>
+    <p class="subtitle">How are you feeling today? Speak or type below.</p>
 
-  <textarea id="userText" placeholder="Type or use mic..."></textarea>
+    <textarea id="userText" placeholder="Start typing your thoughts..."></textarea>
 
-  <button onclick="startMic()" class="mic-btn">🎤 Start Mic</button>
+    <div id="transcript"></div>
 
-  <div id="transcript"></div>
+    <div class="controls">
+        <button onclick="startMic()" class="mic-btn" id="micBtn">
+            <span>🎤</span> <span id="micText">Start Mic</span>
+        </button>
+        <button onclick="analyze()" class="analyze-btn">
+            Analyze Results
+        </button>
+    </div>
 
-  <button onclick="analyze()">Analyze</button>
-
-  <div id="result">
-    <p><b>Emotion:</b> <span id="emotion"></span></p>
-    <p><b>Confidence:</b> <span id="confidence"></span></p>
-    <p><b>Suggestion:</b> <span id="suggestion"></span></p>
-  </div>
+    <div id="result">
+        <div class="result-item">
+            <span class="result-label">Emotion</span>
+            <span id="emotion" class="tag"></span>
+        </div>
+        <div class="result-item">
+            <span class="result-label">Confidence</span>
+            <span id="confidence" style="font-weight: bold; color: var(--primary);"></span>
+        </div>
+        <div class="result-item" style="margin-top: 10px; border-top: 1px solid #e5e7eb; pt-10px;">
+            <p style="margin-bottom: 5px; font-weight: 600; color: #4b5563;">Suggestion</p>
+            <span id="suggestion" style="color: #6b7280; line-height: 1.4;"></span>
+        </div>
+    </div>
 </div>
 
 <script>
-let recognition;
-let isListening = false;
+    let recognition;
+    let isListening = false;
 
-function initSpeech() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    function initSpeech() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Speech recognition not supported in this browser.");
+            return null;
+        }
+        const recog = new SpeechRecognition();
+        recog.continuous = true;
+        recog.interimResults = true;
+        recog.lang = "en-US";
 
-  if (!SpeechRecognition) {
-    alert("Speech recognition not supported. Use Chrome.");
-    return null;
-  }
+        recog.onresult = (event) => {
+            let transcript = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            document.getElementById("transcript").textContent = "Listening...";
+            document.getElementById("userText").value = transcript;
+        };
 
-  const recog = new SpeechRecognition();
-  recog.continuous = true;
-  recog.interimResults = true;
-  recog.lang = "en-US";
-
-  recog.onresult = (event) => {
-    let transcript = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
+        recog.onerror = () => stopMic();
+        return recog;
     }
 
-    document.getElementById("transcript").textContent = transcript;
-    document.getElementById("userText").value = transcript;
-  };
+    function startMic() {
+        if (!recognition) recognition = initSpeech();
+        if (!recognition) return;
 
-  recog.onerror = () => stopMic();
+        const btn = document.getElementById("micBtn");
+        const txt = document.getElementById("micText");
 
-  return recog;
-}
+        if (!isListening) {
+            recognition.start();
+            isListening = true;
+            btn.classList.add("active");
+            txt.textContent = "Stop Mic";
+        } else {
+            stopMic();
+        }
+    }
 
-function startMic() {
-  if (!recognition) recognition = initSpeech();
-  if (!recognition) return;
+    function stopMic() {
+        if (recognition) recognition.stop();
+        isListening = false;
+        const btn = document.getElementById("micBtn");
+        const txt = document.getElementById("micText");
+        btn.classList.remove("active");
+        txt.textContent = "Start Mic";
+        document.getElementById("transcript").textContent = "";
+    }
 
-  if (!isListening) {
-    recognition.start();
-    isListening = true;
-    document.querySelector(".mic-btn").textContent = "⏹ Stop Mic";
-  } else {
-    stopMic();
-  }
-}
+    async function analyze() {
+        const text = document.getElementById("userText").value.trim();
+        if (!text) {
+            alert("Please share some thoughts first.");
+            return;
+        }
 
-function stopMic() {
-  if (recognition) recognition.stop();
-  isListening = false;
-  document.querySelector(".mic-btn").textContent = "🎤 Start Mic";
-}
+        // Showing a "loading" state on button
+        const btn = document.querySelector(".analyze-btn");
+        const originalText = btn.textContent;
+        btn.textContent = "Analyzing...";
+        btn.disabled = true;
 
-async function analyze() {
-  const text = document.getElementById("userText").value.trim();
+        try {
+            const res = await fetch("/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text })
+            });
 
-  if (!text) {
-    alert("Please enter or speak something");
-    return;
-  }
+            const data = await res.json();
 
-  const res = await fetch("/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text })
-  });
-
-  const data = await res.json();
-
-  document.getElementById("emotion").textContent = data.emotion;
-  document.getElementById("confidence").textContent = data.confidence + "%";
-  document.getElementById("suggestion").textContent = data.suggestion;
-
-  document.getElementById("result").style.display = "block";
-}
+            document.getElementById("emotion").textContent = data.emotion;
+            document.getElementById("confidence").textContent = data.confidence + "%";
+            document.getElementById("suggestion").textContent = data.suggestion;
+            document.getElementById("result").style.display = "block";
+        } catch (e) {
+            alert("Connection error. Make sure your backend is running.");
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
 </script>
 
 </body>
