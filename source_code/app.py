@@ -1,9 +1,10 @@
 from flask import Flask, request, jsonify, render_template
 from transformers import pipeline
+import random
 
 app = Flask(__name__)
 
-# Load the emotion detection model (downloads once, then cached)
+# Load the emotion detection model
 print("Loading emotion model... please wait")
 emotion_model = pipeline(
     "text-classification",
@@ -12,15 +13,38 @@ emotion_model = pipeline(
 )
 print("Model ready!")
 
-# Suggestions based on detected emotion
+# Suggestions
 suggestions = {
-    "joy":      "Great to see you feeling positive! Keep journaling what made you happy today.",
-    "sadness":  "It's okay to feel sad. Try a short walk outside or call someone you trust.",
-    "anger":    "Take 5 slow deep breaths. A short walk or exercise can help release tension.",
-    "fear":     "Try the 5-4-3-2-1 grounding technique: name 5 things you can see right now.",
-    "disgust":  "Step away from what's bothering you. A short break and fresh air can help.",
-    "surprise": "Take a moment to process. Write down your thoughts to make sense of things.",
-    "neutral":  "You seem balanced. A short mindfulness session can help maintain that calm.",
+    "joy": [
+        "Great to see you feeling positive! Keep journaling what made you happy today.",
+        "This is wonderful! Share your joy with someone close to you.",
+        "Celebrate this moment! What made you happiest today?",
+        "Ride this wave of happiness—it's contagious! Spread it around."
+    ],
+    "sadness": [
+        "It's okay to feel sad. Try a short walk outside or call someone you trust.",
+        "Consider talking to someone about what's troubling you.",
+        "Sadness is temporary. Give yourself permission to feel it.",
+        "A warm cup of tea, some journaling, or a favorite song might help right now."
+    ],
+    "anger": [
+        "Take 5 slow deep breaths. A short walk or exercise can help release tension.",
+        "Channel this energy into something productive—physical activity works wonders.",
+        "Step back for a moment. What's really bothering you beneath the surface?",
+        "Try cold water on your face or intense exercise to calm the nervous system."
+    ],
+    "fear": [
+        "Try the 5-4-3-2-1 grounding technique: name 5 things you can see right now.",
+        "Remember: fear is just your mind trying to protect you. You're safe.",
+        "Talk through your fears with someone you trust or write them down.",
+        "Take deep breaths and remind yourself of times you've overcome challenges before."
+    ],
+    "neutral": [
+        "You seem balanced. A short mindfulness session can help maintain that calm.",
+        "This equilibrium is valuable—keep nurturing what brings you peace.",
+        "Consider doing something you enjoy to enhance this positive state.",
+        "Reflect on what's helping you stay grounded right now."
+    ],
 }
 
 @app.route("/")
@@ -37,11 +61,21 @@ def analyze():
 
     result = emotion_model(text)[0]
     emotion = result["label"].lower()
-    score   = round(result["score"] * 100, 1)
-    suggestion = suggestions.get(emotion, "Take care of yourself today.")
+    score = round(result["score"] * 100, 1)
+
+    # Map unwanted emotions
+    emotion_mapping = {
+        "disgust": "anger",
+        "surprise": "neutral"
+    }
+    emotion = emotion_mapping.get(emotion, emotion)
+
+    # Pick random suggestion
+    suggestion_list = suggestions.get(emotion, ["Take care of yourself today."])
+    suggestion = random.choice(suggestion_list)
 
     return jsonify({
-        "emotion":    emotion,
+        "emotion": emotion,
         "confidence": score,
         "suggestion": suggestion
     })
