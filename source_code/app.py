@@ -2,10 +2,14 @@ from flask import Flask, request, jsonify, render_template
 from transformers import pipeline
 import random
 import os
+
 app = Flask(__name__)
 
-# Load the emotion detection model
-print("Loading emotion model... please wait")
+# Enable CORS (important if frontend/backend mismatch happens)
+from flask_cors import CORS
+CORS(app)
+
+# Lazy load model
 emotion_model = None
 
 def load_model():
@@ -17,7 +21,7 @@ def load_model():
             model="j-hartmann/emotion-english-distilroberta-base",
             return_all_scores=False
         )
-        print("Model ready!")
+        print("Model loaded successfully!")
     return emotion_model
 
 
@@ -59,42 +63,55 @@ suggestions = {
 def home():
     return render_template("index.html")
 
+
+# Optional health check (helps Render detect app is alive)
+@app.route("/health")
+def health():
+    return "OK", 200
+
+
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    data = request.get_json()
-    text = data.get("text", "").strip()
-
-    if not text:
-        return jsonify({"error": "Please enter some text"}), 400
-
     try:
+        data = request.get_json()
+        text = data.get("text", "").strip()
+
+        if not text:
+            return jsonify({"error": "Please enter some text"}), 400
+
         model = load_model()
         result = model(text)[0]
+
+        emotion = result["label"].lower()
+
+        if emotion not in suggestions:
+            emotion = "neutral"
+
+        score = round(result["score"] * 100, 1)
+
+        # Map unwanted emotions
+        emotion_mapping = {
+            "disgust": "anger",
+            "surprise": "neutral"
+        }
+        emotion = emotion_mapping.get(emotion, emotion)
+
+        suggestion = random.choice(
+            suggestions.get(emotion, ["Take care of yourself today."])
+        )
+
+        return jsonify({
+            "emotion": emotion,
+            "confidence": score,
+            "suggestion": suggestion
+        })
+
     except Exception as e:
-        return jsonify({"error": "Model failed to load"}), 500
-    emotion = result["label"].lower()
+        print("Error:", str(e))
+        return jsonify({"error": "Something went wrong"}), 500
 
-    if emotion not in suggestions:
-        emotion = "neutral"
-    score = round(result["score"] * 100, 1)
 
-    # Map unwanted emotions
-    emotion_mapping = {
-        "disgust": "anger",
-        "surprise": "neutral"
-    }
-    emotion = emotion_mapping.get(emotion, emotion)
-
-    # Pick random suggestion
-    suggestion_list = suggestions.get(emotion, ["Take care of yourself today."])
-    suggestion = random.choice(suggestion_list)
-
-    return jsonify({
-        "emotion": emotion,
-        "confidence": score,
-        "suggestion": suggestion
-    })
-
+# Only for local run
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
